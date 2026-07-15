@@ -1,7 +1,6 @@
 use rand::rngs::ThreadRng;
 use rand::seq::SliceRandom;
 use std::fmt::{Display, Formatter};
-use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Suit {
@@ -206,21 +205,21 @@ impl Hand {
     }
 
     pub fn calculate_bust_on_next_card_probability(&self, deck: &Deck) -> f64 {
-        deck.cards.iter().map(|card| {
-            let mut hand_clone = self.clone();
-            hand_clone.add_card(*card);
-            if hand_clone.is_bust() {
-                1.0
-            } else {
-                0.0
-            }
-        }).sum::<f64>() / deck.cards.len() as f64
+        deck.cards
+            .iter()
+            .map(|card| {
+                let mut hand_clone = self.clone();
+                hand_clone.add_card(*card);
+                if hand_clone.is_bust() { 1.0 } else { 0.0 }
+            })
+            .sum::<f64>()
+            / deck.cards.len() as f64
     }
 
     pub fn finalise(&self) -> FinalisedHand {
         FinalisedHand {
             cards: self.cards.clone(),
-            value: self.get_hand_value()
+            value: self.get_hand_value(),
         }
     }
 }
@@ -228,7 +227,7 @@ impl Hand {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FinalisedHand {
     cards: Vec<Card>,
-    value: u8
+    value: u8,
 }
 
 impl FinalisedHand {
