@@ -1,8 +1,6 @@
+use crate::card::{Deck, FinalisedHand, Hand};
 use std::cell::RefCell;
 use std::sync::Arc;
-use crate::card::{Card, Deck, Hand};
-use crate::game::GameState::DealerTurn;
-use crate::game::TurnTransitionError::InvalidGameStateForAction;
 
 #[derive(Debug, Clone)]
 pub enum GameState {
@@ -13,29 +11,34 @@ pub enum GameState {
     },
     DealerTurn {
         deck: Arc<RefCell<Deck>>,
-        player_hand: Arc<RefCell<Vec<Card>>>,
+        player_hand: FinalisedHand,
         dealer_hand: Arc<RefCell<Hand>>,
     },
     PlayerWin {
         deck: Arc<RefCell<Deck>>,
-        player_hand: Arc<RefCell<Vec<Card>>>,
-        dealer_hand: Arc<RefCell<Vec<Card>>>,
+        player_hand: FinalisedHand,
+        dealer_hand: FinalisedHand,
     },
     DealerWin {
         deck: Arc<RefCell<Deck>>,
-        player_hand: Arc<RefCell<Vec<Card>>>,
-        dealer_hand: Arc<RefCell<Vec<Card>>>,
+        player_hand: FinalisedHand,
+        dealer_hand: FinalisedHand,
+    },
+    Draw {
+        deck: Arc<RefCell<Deck>>,
+        player_hand: FinalisedHand,
+        dealer_hand: FinalisedHand,
     },
 }
 
 #[derive(Debug)]
-enum TurnTransitionError {
+pub enum TurnTransitionError {
     InvalidGameStateForAction,
-    DeckExhausted
+    DeckExhausted,
 }
 
 impl GameState {
-    fn start() -> Self {
+    pub fn start() -> Self {
         let mut deck = Deck::default();
         deck.shuffle();
 
@@ -49,26 +52,33 @@ impl GameState {
         GameState::PlayerTurn {
             deck: Arc::new(RefCell::new(deck)),
             player_hand: Arc::new(RefCell::new(player_hand)),
-            dealer_hand: Arc::new(RefCell::new(dealer_hand))
+            dealer_hand: Arc::new(RefCell::new(dealer_hand)),
         }
     }
 
-    fn player_hit(&mut self) -> Result<Self, TurnTransitionError> {
+    pub fn player_hit(&mut self) -> Result<Self, TurnTransitionError> {
         match self {
-            GameState::PlayerTurn { deck, player_hand, dealer_hand } => {
-                let card = deck.borrow_mut().draw_card().ok_or(TurnTransitionError::DeckExhausted)?;
+            GameState::PlayerTurn {
+                deck,
+                player_hand,
+                dealer_hand,
+            } => {
+                let card = deck
+                    .borrow_mut()
+                    .draw_card()
+                    .ok_or(TurnTransitionError::DeckExhausted)?;
                 player_hand.borrow_mut().add_card(card);
                 if player_hand.borrow().is_bust() {
                     Ok(GameState::DealerWin {
                         deck: deck.clone(),
-                        player_hand: Arc::new(RefCell::new(Vec::from(player_hand.borrow().get_cards()))),
-                        dealer_hand: Arc::new(RefCell::new(Vec::from(dealer_hand.borrow().get_cards()))),
+                        player_hand: player_hand.borrow().finalise(),
+                        dealer_hand: dealer_hand.borrow().finalise(),
                     })
                 } else if player_hand.borrow().is_blackjack() {
                     Ok(GameState::PlayerWin {
                         deck: deck.clone(),
-                        player_hand: Arc::new(RefCell::new(Vec::from(player_hand.borrow().get_cards()))),
-                        dealer_hand: Arc::new(RefCell::new(Vec::from(dealer_hand.borrow().get_cards()))),
+                        player_hand: player_hand.borrow().finalise(),
+                        dealer_hand: dealer_hand.borrow().finalise(),
                     })
                 } else {
                     Ok(GameState::PlayerTurn {
@@ -78,20 +88,55 @@ impl GameState {
                     })
                 }
             }
-            _ => Err(InvalidGameStateForAction)
+            _ => Err(TurnTransitionError::InvalidGameStateForAction),
         }
     }
 
-    fn player_stand(&mut self) -> Result<Self, TurnTransitionError> {
+    pub fn player_stand(&mut self) -> Result<Self, TurnTransitionError> {
         match self {
-            GameState::PlayerTurn { deck, player_hand, dealer_hand } => {
-                Ok(DealerTurn {
+            GameState::PlayerTurn {
+                deck,
+                player_hand,
+                dealer_hand,
+            } => Ok(GameState::DealerTurn {
+                deck: deck.clone(),
+                player_hand: player_hand.borrow().finalise(),
+                dealer_hand: dealer_hand.clone(),
+            }),
+            _ => Err(TurnTransitionError::InvalidGameStateForAction),
+        }
+    }
+
+    pub fn execute_dealer_turn(&mut self) -> Result<Self, TurnTransitionError> {
+        // TODO: Refactor to execute turn-by-turn instead of all at once
+        match self {
+            GameState::DealerTurn {
+                deck,
+                player_hand,
+                dealer_hand,
+            } => {
+                let mut hand = dealer_hand.borrow_mut();
+                while hand.get_hand_value().lt(&17) {
+                    let card = deck
+                        .borrow_mut()
+                        .draw_card()
+                        .ok_or(TurnTransitionError::DeckExhausted)?;
+                    hand.add_card(card);
+                }
+                if hand.is_bust() || hand.get_hand_value() < player_hand.get_value() {
+                    return Ok(GameState::PlayerWin {
+                        deck: deck.clone(),
+                        player_hand: player_hand.clone(),
+                        dealer_hand: dealer_hand.borrow().finalise(),
+                    });
+                }
+                Ok(GameState::DealerWin {
                     deck: deck.clone(),
-                    player_hand: Arc::new(RefCell::new(Vec::from(player_hand.borrow().get_cards()))),
-                    dealer_hand: dealer_hand.clone(),
+                    player_hand: player_hand.clone(),
+                    dealer_hand: hand.finalise(),
                 })
             }
-            _ => Err(InvalidGameStateForAction)
+            _ => Err(TurnTransitionError::InvalidGameStateForAction),
         }
     }
 }
