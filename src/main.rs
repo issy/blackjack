@@ -1,6 +1,8 @@
+use crate::tui::start_app;
+
 mod game;
 mod tui;
 
 fn main() {
-    println!("Hello, world!");
+    start_app().unwrap();
 }
