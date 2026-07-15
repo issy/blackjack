@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use crate::game::state::GameState;
 use crate::tui::home::Home;
-use color_eyre::Result;
 use color_eyre::eyre::Context;
+use color_eyre::Result;
 use crossterm::event::{self, KeyCode};
 use ratatui::DefaultTerminal;
 
