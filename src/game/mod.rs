@@ -1,2 +1,2 @@
-mod state;
+pub mod state;
 mod card;

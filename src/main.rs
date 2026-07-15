@@ -1,8 +1,6 @@
-use crate::tui::start_app;
-
-mod game;
+pub mod game;
 mod tui;
 
 fn main() {
-    start_app().unwrap();
+    tui::entrypoint::start_app().unwrap();
 }
