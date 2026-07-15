@@ -1,5 +1,6 @@
 use crate::card::{Deck, FinalisedHand, Hand};
 use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -38,22 +39,37 @@ pub enum TurnTransitionError {
 }
 
 impl GameState {
-    pub fn start() -> Self {
-        let mut deck = Deck::default();
-        deck.shuffle();
-
+    fn start_with_deck(mut deck: Arc<RefCell<Deck>>) -> Result<Self, TurnTransitionError> {
         let mut player_hand = Hand::default();
-        player_hand.add_card(deck.draw_card().unwrap());
-        player_hand.add_card(deck.draw_card().unwrap());
+        player_hand.add_card(deck.borrow_mut().draw_card().ok_or(TurnTransitionError::DeckExhausted)?);
+        player_hand.add_card(deck.borrow_mut().draw_card().ok_or(TurnTransitionError::DeckExhausted)?);
 
         let mut dealer_hand = Hand::default();
-        dealer_hand.add_card(deck.draw_card().unwrap());
+        dealer_hand.add_card(deck.borrow_mut().draw_card().ok_or(TurnTransitionError::DeckExhausted)?);
 
-        GameState::PlayerTurn {
-            deck: Arc::new(RefCell::new(deck)),
+        Ok(GameState::PlayerTurn {
+            deck: deck.clone(),
             player_hand: Arc::new(RefCell::new(player_hand)),
             dealer_hand: Arc::new(RefCell::new(dealer_hand)),
-        }
+        })
+    }
+
+    pub fn start() -> Self {
+        let mut deck = Arc::new(RefCell::new(Deck::default()));
+        deck.borrow_mut().shuffle();
+
+        Self::start_with_deck(deck).unwrap()
+    }
+
+    pub fn restart(&self) -> Result<Self, TurnTransitionError> {
+        let deck = match self {
+            GameState::PlayerTurn { deck, .. } => deck,
+            GameState::DealerTurn { deck, .. } => deck,
+            GameState::PlayerWin { deck, .. } => deck,
+            GameState::DealerWin { deck, .. } => deck,
+            GameState::Draw { deck, .. } => deck,
+        };
+        Self::start_with_deck(deck.clone())
     }
 
     pub fn player_hit(&mut self) -> Result<Self, TurnTransitionError> {
