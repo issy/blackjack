@@ -216,4 +216,27 @@ impl Hand {
             }
         }).sum::<f64>() / deck.cards.len() as f64
     }
+
+    pub fn finalise(&self) -> FinalisedHand {
+        FinalisedHand {
+            cards: self.cards.clone(),
+            value: self.get_hand_value()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FinalisedHand {
+    cards: Vec<Card>,
+    value: u8
+}
+
+impl FinalisedHand {
+    pub fn get_cards(&self) -> &Vec<Card> {
+        &self.cards
+    }
+
+    pub fn get_value(&self) -> u8 {
+        self.value
+    }
 }
