@@ -1,4 +1,4 @@
-use crate::card::{Deck, FinalisedHand, Hand};
+use crate::game::card::{Deck, FinalisedHand, Hand};
 use std::cell::RefCell;
 use std::sync::Arc;
 
