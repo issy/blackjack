@@ -1,2 +1,2 @@
 pub mod entrypoint;
-mod home;
+mod app;

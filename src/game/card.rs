@@ -13,10 +13,10 @@ pub enum Suit {
 impl Display for Suit {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let character = match self {
-            Suit::Hearts => "♥️",
-            Suit::Diamonds => "♦️",
-            Suit::Clubs => "♣️",
-            Suit::Spades => "♠️",
+            Suit::Hearts => "♥",
+            Suit::Diamonds => "♦",
+            Suit::Clubs => "♣",
+            Suit::Spades => "♠",
         };
         write!(f, "{}", character)
     }
@@ -51,10 +51,7 @@ impl Rank {
             Rank::Seven => (7, None),
             Rank::Eight => (8, None),
             Rank::Nine => (9, None),
-            Rank::Ten => (10, None),
-            Rank::Jack => (10, None),
-            Rank::Queen => (10, None),
-            Rank::King => (10, None),
+            Rank::Ten | Rank::Jack | Rank::Queen | Rank::King => (10, None),
         }
     }
 }
@@ -82,8 +79,8 @@ impl Display for Rank {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Card {
-    suit: Suit,
-    rank: Rank,
+    pub suit: Suit,
+    pub rank: Rank,
 }
 
 impl Display for Card {

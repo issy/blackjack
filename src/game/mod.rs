@@ -1,2 +1,2 @@
 pub mod state;
-mod card;
+pub mod card;
